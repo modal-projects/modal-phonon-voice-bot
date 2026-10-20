@@ -11,11 +11,9 @@ cd modal-phonon-voice-bot
 
 ## Prerequisites
 
-- A Modal account. Authenticate the CLI from this repo after `uv sync`, with `uv run modal setup` (the same binary is `.venv/bin/modal`).
-- Python 3.13+ and [uv](https://docs.astral.sh/uv/).
+- A Modal account.
+- [uv](https://docs.astral.sh/uv/).
 - Node.js and npm, to build the console.
-
-Commands use the default Modal environment for your profile.
 
 ## Setup
 
@@ -30,7 +28,7 @@ uv sync
 uv run modal setup
 ```
 
-`uv run modal setup` authenticates the CLI. The same binary is `.venv/bin/modal`. Deploy and volume commands use that profile’s default environment.
+`uv run modal setup` authenticates the CLI.
 
 ### 2. Install Python dependencies
 
