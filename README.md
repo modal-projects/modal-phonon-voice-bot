@@ -1,6 +1,8 @@
 # modal-phonon-voice-bot
 
-A Pipecat voice agent on Modal with Gradium Phonon text-to-speech running in the same CPU container as the agent. Each call is a Modal Session pinned to that container, so Small WebRTC signaling and Phonon share one process. The LLM is a Dedicated Endpoint. Speech-to-text is a separate vLLM server.
+A [Pipecat](https://docs.pipecat.ai/) voice agent on Modal with [Gradium Phonon](https://huggingface.co/gradium/phonon-31m-en) text-to-speech running in the same CPU container as the agent. Each call is a [Modal Session](https://modal.com/docs/guide/sticky-sessions) pinned to that container, which makes autoscaling with WebRTC easy on Modal. The LLM is a Modal Dedicated Endpoint using PhoneLLM Mini Alpha 2. Speech-to-text uses Qwen3-ASR served with vLLM - also running on Modal.
+
+<video src="https://modal-cdn.com/cdnbot/phonon_demo_01i9sp3dzg_003b456e.mp4" controls width="100%"></video>
 
 ```bash
 git clone https://github.com/modal-projects/modal-phonon-voice-bot
