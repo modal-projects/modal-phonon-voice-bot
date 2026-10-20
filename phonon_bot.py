@@ -315,6 +315,7 @@ client_image = (
         "/root/client_host.py",
     )
     .add_local_dir(Path(__file__).parent / "client", remote_path="/client")
+    .add_local_python_source("services")
 )
 
 
