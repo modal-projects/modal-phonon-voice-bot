@@ -38,40 +38,38 @@ From the repo root:
 uv sync
 ```
 
-The project name is `modal-phonon-voice-bot`. The local environment is the Modal CLI. Pipecat, `ptts`, and the rest of the bot’s Python packages install into the container image at deploy time.
+The project name is `modal-phonon-voice-bot`.
 
 ### 3. Phonon weights
 
-The checkpoint is not copied into the image. `services/phonon_tts.py` references volume `phonon-7e71a02d` with `create_if_missing=True` and no environment name, so Modal creates it in your profile’s default environment if it does not already exist. The bot mounts it at `/models/phonon`.
-
-The first container start downloads the q8 English files from [gradium/phonon-31m-en](https://huggingface.co/gradium/phonon-31m-en) when they are not already on that volume, then commits them. Later containers reuse the cache. The repository is public, so a Hugging Face token is not required.
-
+The bot downloads the q8 English weights from [gradium/phonon-31m-en](https://huggingface.co/gradium/phonon-31m-en) when they are not already cached to the Modal Volume. 
 `ptts` reads these files at the volume root: `config.json`, `model.q8.gguf`, `tokenizer.json`, and `default-voice.safetensors` (the voice named `default`).
 
-### 4. Build the frontend
+### 4. Qwen3-ASR
 
-`client/` is gitignored. The site image copies it at deploy time, and deploy fails if the directory is missing. From `web/`:
+From the repo root,:
+
+```bash
+uv run modal deploy services/qwen3-asr-vllm.py
+```
+
+### 5. PhoneLLM Endpoint
+
+Deploy [PhoneLLM Mini Alpha 2](https://modal.com/library/pipecat/phonellm-mini-alpha-2) in the same Modal environment as the bot with the name `phonellm-mini-alpha-2`. The bot looks up the Endpoint by name at startup.
+
+### 6. Build the frontend
+
+From `web/`:
 
 ```bash
 npm install
 npm run build
 ```
 
-`npm run build` runs Vite and writes `../client`.
+`npm run build` runs Vite and writes `../client` which will be attached to frontend image.
 
-### 5. Qwen3-ASR and the PhoneLLM endpoint
 
-Both have to be deployed in the same environment as the bot.
-
-Speech-to-text is app `qwen3-asr-vllm`, server class `VLLMServer`. From the repo root, if you still need to deploy it:
-
-```bash
-uv run modal deploy services/qwen3-asr-vllm.py
-```
-
-This repo does not define the LLM endpoint `phonellm-mini-alpha-2` (backing app `ep-phonellm-mini-alpha-2`, server class `Server`). Deploy [PhoneLLM Mini Alpha 2](https://modal.com/library/pipecat/phonellm-mini-alpha-2) in the same Modal environment as the bot. The bot looks up `phonellm-mini-alpha-2` at startup.
-
-### 6. Deploy
+### 7. Deploy Bot to Modal
 
 From the repo root, after the frontend build:
 
@@ -79,10 +77,9 @@ From the repo root, after the frontend build:
 uv run modal deploy phonon_bot.py
 ```
 
-This publishes app `phonon-pipecat-bot`: the `VoiceBot` server and the `site` function. The build picks up `services/`, `web/client_host.py`, and `client/` from this directory. `site` is in `us-west`.
-
 ### 7. Try it out
 
-Open the `site` URL printed by deploy. Connect in the console and allow the microphone. The default voice is `default` (`PHONON_VOICE`), from `default-voice.safetensors`. The Metrics tab shows time to first byte for TTS.
+Open the `site` URL printed by deploy. Click Connect to start a conversations. The Metrics tab shows TTFX metrics for each of the three services: STT, LLM, TTS.
 
-ICE is STUN only (`stun:stun.l.google.com:19302`). No TURN server is configured. On a network that cannot use that STUN server, the call may not connect.
+#### Note 
+Currently ICE is STUN only. On a network that cannot use that STUN server, e.g. has a restrictive NAT, the call may not connect. See the Pipecat docs to configure a TURN server.
