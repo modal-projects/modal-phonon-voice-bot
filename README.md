@@ -1,1 +1,1 @@
-# modal-pipecat-voice-agents
+# modal-phonon-voice-bot

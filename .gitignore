@@ -1,0 +1,19 @@
+.DS_Store
+.venv/
+web/node_modules/
+
+# Vite build output (web/vite.config.ts outDir).
+/client/
+
+# Python bytecode caches.
+__pycache__/
+*.py[cod]
+
+# Phonon checkpoints are supplied separately and should not be committed.
+phonon-*/
+*.gguf
+*.safetensors
+
+# Local synthesis output.
+out.wav
+*.wav
