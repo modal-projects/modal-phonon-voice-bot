@@ -11,7 +11,7 @@ cd modal-phonon-voice-bot
 
 ## Phonon in the bot container
 
-Phonon runs in-process on CPU. This demo uses Gradium’s on-device q8 build (`ptts`, `device="cpu"`, `quant="q8"`). The weights are cached on a Modal volume mounted at `/models/phonon` and loaded when the container starts. Synthesis stays in that process, so a remote TTS request is not on the path to the first audio byte. The console Metrics tab shows time to first byte for the call you are on.
+Phonon runs in-process on CPU. This demo uses Gradium’s on-device q8 build (`ptts`, `device="cpu"`, `quant="q8"`). The weights are cached on a Modal volume and loaded when the container starts. Synthesis stays in that process, so we save network hops on the path to the first audio byte.
 
 ## One session per call
 
