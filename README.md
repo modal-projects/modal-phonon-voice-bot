@@ -9,24 +9,6 @@ git clone https://github.com/modal-projects/modal-phonon-voice-bot
 cd modal-phonon-voice-bot
 ```
 
-## Phonon in the bot container
-
-Phonon runs in-process on CPU. This demo uses Gradium’s on-device q8 build (`ptts`, `device="cpu"`, `quant="q8"`). The weights are cached on a Modal volume and loaded when the container starts. Synthesis stays in that process, so we save network hops on the path to the first audio byte.
-
-## One session per call
-
-`VoiceBot` is a sessioned server. One call stays on one container. The Small WebRTC peer connection lives in memory in that process, next to Phonon, so the SDP offer and the ICE candidate patches have to reach that same process.
-
-The browser talks only to `site`, the public ASGI app on the same origin. A browser preflight cannot send `Modal-Authorization` to the bot, so `site` stores the session token in an HttpOnly cookie and forwards `/api/offer` (POST for the offer, PATCH for ICE candidates).
-
-WebRTC media is UDP and does not keep the Modal session alive. While the call is connected, the console calls `/api/keepalive` every 30 seconds. `site` forwards that to the pinned container. The session idle timeout is 10 minutes.
-
-## PhoneLLM Mini
-
-Replies come from the PhoneLLM Mini Alpha 2 Dedicated Endpoint, `phonellm-mini-alpha-2`. At startup the bot looks up that endpoint and calls its OpenAI-compatible chat API. The backing app is `ep-phonellm-mini-alpha-2` and the server class is `Server`. This repo does not define the endpoint; deploy [PhoneLLM Mini Alpha 2](https://modal.com/library/pipecat/phonellm-mini-alpha-2) in the same Modal environment as the bot.
-
-In the same bot container, Silero VAD and Smart Turn decide when a user turn ends. Speech-to-text is Qwen3-ASR (`Qwen/Qwen3-ASR-0.6B`) on a realtime websocket to the `qwen3-asr-vllm` app.
-
 ## Prerequisites
 
 - A Modal account. Authenticate the CLI from this repo after `uv sync`, with `uv run modal setup` (the same binary is `.venv/bin/modal`).
