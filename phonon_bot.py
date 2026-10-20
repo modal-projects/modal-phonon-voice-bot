@@ -15,12 +15,18 @@ from pathlib import Path
 
 import modal
 
-from services.phonon_tts import MODEL_REMOTE, load_engine, phonon_volume
+from services.phonon_tts import (
+    DEFAULT_VOICE,
+    MODEL_REMOTE,
+    ensure_checkpoint,
+    load_engine,
+    phonon_volume,
+)
 
 app = modal.App("phonon-pipecat-bot")
 
 PORT = 8000
-VOICE = os.environ.get("PHONON_VOICE", "Freya")
+VOICE = os.environ.get("PHONON_VOICE", DEFAULT_VOICE)
 
 # Empty by default: the ASR server does not require a bearer token.
 STT_API_KEY = os.environ.get("STT_API_KEY", "")
@@ -42,6 +48,7 @@ image = (
     .uv_pip_install(
         "pipecat-ai[webrtc,websocket]==1.13.0",
         "ptts==0.4.0rc3",
+        "huggingface_hub>=0.26",
         "uvicorn",
     )
     .add_local_python_source("services")
@@ -212,12 +219,14 @@ with image.imports():
 class VoiceBot:
     @modal.enter(snap=True)
     def startup(self) -> None:
-        # Volumes are mounted for snapshot capture and again on restore, so
-        # this snap=True load can read MODEL_REMOTE. Modal's memory-snapshot
-        # guide loads weights from a Volume inside enter(snap=True). Files
-        # read here must stay at these paths: volume edits do not refresh the
-        # snapshot, and deleting them breaks restore. Snapshotting stays on.
-
+        # Download and commit in this snap=True hook, before load_engine.
+        # The memory-snapshot guide loads Volume files inside enter(snap=True)
+        # and does not forbid Volume.commit there; the volumes guide commits
+        # from the container that mounts the Volume. The commit returns before
+        # the snapshot is taken, so later containers reuse the cache. Files
+        # read into the snapshot must stay at these paths: volume edits do not
+        # refresh the snapshot, and deleting them breaks restore.
+        ensure_checkpoint()
         self.engine = load_engine(VOICE)
         print(f"loaded {self.engine!r}")
         from services.pipecat.vllm_stt import stt_ws_url

@@ -12,7 +12,7 @@ from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 from pipecat.transcriptions.language import Language
 
-VOICE = os.environ.get("PHONON_VOICE", "Freya")
+VOICE = os.environ.get("PHONON_VOICE", "default")
 
 
 class PhononTTSService(TTSService):
