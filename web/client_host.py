@@ -15,7 +15,6 @@ import modal
 CLIENT_ROOT = Path("/client")
 BOT_APP_NAME = "phonon-pipecat-bot"
 BOT_SERVER_NAME = "VoiceBot"
-BOT_ENVIRONMENT = "shababo-dev"
 SESSION_COOKIE = "bot_session"
 SESSION_IDLE_SECONDS = 600
 
@@ -31,11 +30,7 @@ def _browser_ice_servers(specs: list) -> list[dict]:
 
 
 def _bot() -> modal.Server:
-    return modal.Server.from_name(
-        BOT_APP_NAME,
-        BOT_SERVER_NAME,
-        environment_name=BOT_ENVIRONMENT,
-    )
+    return modal.Server.from_name(BOT_APP_NAME, BOT_SERVER_NAME)
 
 
 async def _wait_healthy(url: str, token: str) -> dict:

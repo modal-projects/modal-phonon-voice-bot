@@ -21,37 +21,9 @@ WebRTC media is UDP and does not keep the Modal session alive. While the call is
 
 ## PhoneLLM Mini
 
-Replies come from the PhoneLLM Mini Alpha 2 Dedicated Endpoint, `phonellm-mini-alpha-2`. At startup the bot looks up that endpoint and calls its OpenAI-compatible chat API. The backing app is `ep-phonellm-mini-alpha-2` and the server class is `Server`.
+Replies come from the PhoneLLM Mini Alpha 2 Dedicated Endpoint, `phonellm-mini-alpha-2`. At startup the bot looks up that endpoint and calls its OpenAI-compatible chat API. The backing app is `ep-phonellm-mini-alpha-2` and the server class is `Server`. This repo does not define the endpoint; deploy [PhoneLLM Mini Alpha 2](https://modal.com/library/pipecat/phonellm-mini-alpha-2) in the same Modal environment as the bot.
 
 In the same bot container, Silero VAD and Smart Turn decide when a user turn ends. Speech-to-text is Qwen3-ASR (`Qwen/Qwen3-ASR-0.6B`) on a realtime websocket to the `qwen3-asr-vllm` app.
-
-## Architecture
-
-The browser’s HTTP traffic stops at `site`. Microphone and speaker audio are WebRTC to the pinned `VoiceBot` container.
-
-```mermaid
-flowchart TB
-  Browser["Browser: voice-ui-kit console"]
-  Site["site ASGI app"]
-
-  subgraph bot ["VoiceBot, one CPU container"]
-    RTC["Small WebRTC"]
-    Pipe["Pipecat pipeline: Silero VAD, Smart Turn"]
-    Phonon["Phonon TTS q8, volume /models/phonon"]
-  end
-
-  STT["qwen3-asr-vllm realtime websocket"]
-  LLM["phonellm-mini-alpha-2 Dedicated Endpoint"]
-
-  Browser -->|"/api/session, /api/offer, /api/keepalive"| Site
-  Site -->|"Modal Session, proxy /api/offer"| RTC
-  Browser <-->|"WebRTC audio"| RTC
-  RTC --> Pipe
-  Pipe --> Phonon
-  Phonon --> RTC
-  Pipe --> STT
-  Pipe --> LLM
-```
 
 ## Prerequisites
 
@@ -59,11 +31,24 @@ flowchart TB
 - Python 3.13+ and [uv](https://docs.astral.sh/uv/).
 - Node.js and npm, to build the console.
 
-The app, volume, and server lookups use Modal environment `shababo-dev`. That is this workspace’s environment name, baked into `MODAL_ENVIRONMENT` (`phonon_bot.py`, `services/phonon_tts.py`), `BOT_ENVIRONMENT` (`web/client_host.py`), and the Qwen3-ASR lookup in `services/pipecat/vllm_stt.py`. It is not a shared environment you can assume access to. To deploy elsewhere, change those constants and create the Phonon volume, the Qwen3-ASR app, and the PhoneLLM endpoint in that environment. Pass `--env <name>` on the Modal CLI when your active profile is a different environment. If you omit `--env`, the CLI uses `MODAL_ENVIRONMENT`, then your active profile, then the workspace default.
+Commands use the default Modal environment for your profile.
 
 ## Setup
 
-### 1. Install Python dependencies
+### 1. Create a Modal account and set up the CLI
+
+Create a Modal account at [modal.com](https://modal.com) if you do not have one.
+
+From the repo root:
+
+```bash
+uv sync
+uv run modal setup
+```
+
+`uv run modal setup` authenticates the CLI. The same binary is `.venv/bin/modal`. Deploy and volume commands use that profile’s default environment.
+
+### 2. Install Python dependencies
 
 From the repo root:
 
@@ -73,24 +58,22 @@ uv sync
 
 The project name is `modal-phonon-voice-bot`. The local environment is the Modal CLI. Pipecat, `ptts`, and the rest of the bot’s Python packages install into the container image at deploy time.
 
-### 2. Upload the Phonon weights
+### 3. Upload the Phonon weights
 
 The checkpoint is gitignored (`phonon-*/`, `*.gguf`) and is not copied into the image. `services/phonon_tts.py` references volume `phonon-7e71a02d` with `create_if_missing` left unset, so the volume has to exist before deploy. The bot mounts it at `/models/phonon`. Checkpoint files belong at the volume root: `config.json`, `model.q8.gguf`, `tokenizer.json`, and `voices/`.
 
 A local copy in this checkout is the gitignored directory `phonon-7e71a02d.200` (`voices/` includes `Freya.safetensors`). From the repo root, create the volume once, then upload. A remote path that ends in `/` is a directory, and the CLI appends the local file or directory name under it. `modal volume put … phonon-7e71a02d.200 /` would store the checkpoint at `/phonon-7e71a02d.200/`, which the mount would not see. These paths put the files at the volume root:
 
 ```bash
-uv run modal volume create --env shababo-dev phonon-7e71a02d
+uv run modal volume create phonon-7e71a02d
 
-uv run modal volume put --env shababo-dev phonon-7e71a02d phonon-7e71a02d.200/config.json /config.json
-uv run modal volume put --env shababo-dev phonon-7e71a02d phonon-7e71a02d.200/model.q8.gguf /model.q8.gguf
-uv run modal volume put --env shababo-dev phonon-7e71a02d phonon-7e71a02d.200/tokenizer.json /tokenizer.json
-uv run modal volume put --env shababo-dev phonon-7e71a02d phonon-7e71a02d.200/voices /voices
+uv run modal volume put phonon-7e71a02d phonon-7e71a02d.200/config.json /config.json
+uv run modal volume put phonon-7e71a02d phonon-7e71a02d.200/model.q8.gguf /model.q8.gguf
+uv run modal volume put phonon-7e71a02d phonon-7e71a02d.200/tokenizer.json /tokenizer.json
+uv run modal volume put phonon-7e71a02d phonon-7e71a02d.200/voices /voices
 ```
 
-`--env shababo-dev` matches the constants in this repo. If you changed them, pass that environment instead.
-
-### 3. Build the frontend
+### 4. Build the frontend
 
 `client/` is gitignored. The site image copies it at deploy time, and deploy fails if the directory is missing. From `web/`:
 
@@ -101,19 +84,19 @@ npm run build
 
 `npm run build` runs Vite and writes `../client`.
 
-### 4. Qwen3-ASR and the PhoneLLM endpoint
+### 5. Qwen3-ASR and the PhoneLLM endpoint
 
 Both have to be deployed in the same environment as the bot.
 
 Speech-to-text is app `qwen3-asr-vllm`, server class `VLLMServer`. From the repo root, if you still need to deploy it:
 
 ```bash
-uv run modal deploy --env shababo-dev services/qwen3-asr-vllm.py
+uv run modal deploy services/qwen3-asr-vllm.py
 ```
 
-The LLM endpoint `phonellm-mini-alpha-2` (backing app `ep-phonellm-mini-alpha-2`, server class `Server`) is not created by this repo. It has to be deployed in that environment before the bot starts. The bot looks up its URL at startup.
+This repo does not define the LLM endpoint `phonellm-mini-alpha-2` (backing app `ep-phonellm-mini-alpha-2`, server class `Server`). Deploy [PhoneLLM Mini Alpha 2](https://modal.com/library/pipecat/phonellm-mini-alpha-2) in the same Modal environment as the bot. The bot looks up `phonellm-mini-alpha-2` at startup.
 
-### 5. Deploy
+### 6. Deploy
 
 From the repo root, after the frontend build:
 
@@ -121,9 +104,9 @@ From the repo root, after the frontend build:
 uv run modal deploy phonon_bot.py
 ```
 
-Add `--env shababo-dev` when your active profile is a different environment. This publishes app `phonon-pipecat-bot`: the `VoiceBot` server and the `site` function. The build picks up `services/`, `web/client_host.py`, and `client/` from this directory. `site` is in `us-west`.
+This publishes app `phonon-pipecat-bot`: the `VoiceBot` server and the `site` function. The build picks up `services/`, `web/client_host.py`, and `client/` from this directory. `site` is in `us-west`.
 
-### 6. Try it out
+### 7. Try it out
 
 Open the `site` URL printed by deploy. Connect in the console and allow the microphone. The default voice is Freya (`PHONON_VOICE`). The Metrics tab shows time to first byte for TTS.
 

@@ -22,7 +22,6 @@ app = modal.App("phonon-pipecat-bot")
 PORT = 8000
 VOICE = os.environ.get("PHONON_VOICE", "Freya")
 
-MODAL_ENVIRONMENT = "shababo-dev"
 # Empty by default: the ASR server does not require a bearer token.
 STT_API_KEY = os.environ.get("STT_API_KEY", "")
 STT_MODEL = os.environ.get("STT_MODEL", "Qwen/Qwen3-ASR-0.6B")
@@ -50,11 +49,7 @@ image = (
 
 
 def _llm_server() -> modal.Server:
-    return modal.Server.from_name(
-        LLM_APP_NAME,
-        LLM_SERVER_NAME,
-        environment_name=MODAL_ENVIRONMENT,
-    )
+    return modal.Server.from_name(LLM_APP_NAME, LLM_SERVER_NAME)
 
 
 def _openai_base_url(service_url: str | None) -> str:

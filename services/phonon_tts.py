@@ -1,7 +1,7 @@
 """Phonon checkpoint wiring for the voice bot.
 
-The checkpoint lives on the ``phonon-7e71a02d`` Volume in ``shababo-dev``,
-mounted at ``/models/phonon``. ``load_engine`` builds ``ptts.TTS`` from that
+The checkpoint lives on the ``phonon-7e71a02d`` Volume in the default
+environment, mounted at ``/models/phonon``. ``load_engine`` builds ``ptts.TTS`` from that
 mount. ``ptts`` is imported inside the loader so this module stays light at
 import time.
 """
@@ -12,13 +12,9 @@ import modal
 
 MODEL_REMOTE = "/models/phonon"
 PHONON_VOLUME = "phonon-7e71a02d"
-MODAL_ENVIRONMENT = "shababo-dev"
 # Checkpoint objects sit at the volume root. Mounting the volume at
 # MODEL_REMOTE makes them visible to ptts.TTS.
-phonon_volume = modal.Volume.from_name(
-    PHONON_VOLUME,
-    environment_name=MODAL_ENVIRONMENT,
-)
+phonon_volume = modal.Volume.from_name(PHONON_VOLUME)
 
 
 def load_engine(voice: str | None = None):

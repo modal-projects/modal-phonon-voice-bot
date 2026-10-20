@@ -26,11 +26,7 @@ STT_SERVER_NAME = "VLLMServer"
 
 
 def _stt_server() -> modal.Server:
-    return modal.Server.from_name(
-        STT_APP_NAME,
-        STT_SERVER_NAME,
-        environment_name="shababo-dev",
-    )
+    return modal.Server.from_name(STT_APP_NAME, STT_SERVER_NAME)
 
 
 def _ws_realtime_url(service_url: str) -> str:
